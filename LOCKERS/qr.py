@@ -5,13 +5,13 @@ import secrets
 
 import qrcode
 
-def generate_token():
+def generar_token():
     return secrets.token_urlsafe(32)
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-def generate_qr_data_url(claim_url: str) -> str:
+def generar_qr_data_url(claim_url: str) -> str:
     img = qrcode.make(claim_url)
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
