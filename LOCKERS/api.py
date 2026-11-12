@@ -102,18 +102,19 @@ def reserve_locker():
     conn.commit()
     conn.close()
 
-    claim_url = f"{WEB_CLAIM_URL}?token={token}"
+    claim_url = "https://reservar-casilleros-fime.netlify.app/"
     qr_data_url = generar_qr_data_url(claim_url)
 
     return jsonify({
         "status": "success",
         "message": "Casillero reservado",
         "locker_id": int(locker_id),
-        "qr": qr_data_url,
-        "claim_url": claim_url,
+        "qr": {
+            "data_url": qr_data_url,
+            "claim_url": claim_url
+        },
         "expires_at": expires_at
     })
-
 @app.route("/api/qr/claim", methods=["POST"])
 def claim_qr():
     data = request.get_json(silent=True) or {}
