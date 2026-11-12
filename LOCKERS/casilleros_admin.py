@@ -1,6 +1,6 @@
 # PROGRAMA: Aministrador de Casilleros.
 
-# Librerías necesarias1
+# Librerías necesarias
 import sqlite3
 import sys
 import os
@@ -11,20 +11,13 @@ try:
     cursor = conn.cursor()
     print('<< Conexion creada')
 
-    #   Los tipos de variables que se utilizarán en nuestra base de datos serán:
-    #   id: tipo ENTERO, y LLAVE PRIMARIA
-    #   edificio: tipo ENTERO.
-    #   en_uso: tipo BOOLEANO o ENTERO (sqlite no tiene tipo booleano nativo, pero si primero se pasa por python
-    #   se puede utilizar True y False, pero en la tabla se guardarán automaticamente como 1 y 0)}
-    #   (vease la variable siguiente, usada para crear la tabla)
-
     tb_creation = """ 
         CREATE TABLE IF NOT EXISTS casilleros (
             id INT PRIMARY KEY,
             edificio INT,
             en_uso BOOL
         );
-    """ # crea la tabla casilleros si no existe
+    """ 
     cursor.execute(tb_creation)
     print('<< Tabla casilleros creada.')
 
@@ -37,19 +30,19 @@ try:
     """
     cursor.execute(tb_user_creation)
     
-    # El siguiente bucle se utiliza para crear los casilleros del edificio 5 (10 filas y 10 columnas, así que son 100)
-    # Líneas usadas para agregar los registros iniciales
-    
+    # 1. Generar Edificio 5 (INSERT OR IGNORE evita sobrescribir reservas)
     for i in range(1, 101):
-        cursor.execute("INSERT INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", (5000 + i, 5, False)) # crear registros
-    # Su utiliza este código para hacer que los casilleros pares salgan como OCUPADOS
-    cursor.execute("UPDATE casilleros SET en_uso = 0")
+        cursor.execute("INSERT OR IGNORE INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", (5000 + i, 5, False)) 
     
-
+    # 2. Generar Polideportivo (edificio 1)
+    for i in range(1, 225):
+        cursor.execute("INSERT OR IGNORE INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", (1000 + i, 1, False))
+        
     conn.commit()
+    print('<< Registros verificados/actualizados.')
 
-except sqlite3.IntegrityError as error: # si ya existen los registros, generaran el error de integridad y sabremos que ya existen
-    print('<< Registros existentes.')  
+except sqlite3.Error as error: 
+    print(f'<< Error en la base de datos: {error}')  
 
 loggedin=False
 #Inicio de sesion --->>>
@@ -73,85 +66,91 @@ while loggedin==False:
         in_pass=input()
         cursor.execute("SELECT password FROM users WHERE user = ?", (user,))
         out_pass=cursor.fetchone()
-        if str(out_pass[0]) == in_pass: 
+        
+        # Validar que el usuario exista antes de comprobar contraseña
+        if out_pass and str(out_pass[0]) == in_pass: 
             loggedin=True
-            os.system('clear')
+            os.system('clear' if os.name == 'posix' else 'cls') # Compatible con Windows y Mac/Linux
             print("<< Acceso concedido")
         else:
             print("<< Contraseña o usuario incorrectos")
 
 # Escoger accion
-
 opt = 0
 while opt != "1" and opt !="0":
 
     print("Ingrese 1 para reservar, 0 para liberar.")
     opt = input("Escoge una opcion >> ")
+    
     if opt=="1":
-
-        #   Código para la consulta simple --->
+        # Código para la consulta simple --->
         cursor.execute("SELECT id, edificio FROM casilleros WHERE en_uso = 0")
         output = cursor.fetchall()
         print('Los casilleros Disponibles son: ')
         for row in output:
             print('   ', row[0], 'Edificio:', row[1])
 
-
         # Reservar --->>>
         id_res=0
-        while int(id_res)<5000 or int(id_res)>5100:
+        # NUEVA VALIDACIÓN: Permitir 5001-5100 (Ed. 5) y 1001-1224 (Polideportivo)
+        while not ((5000 < int(id_res) <= 5100) or (1000 < int(id_res) <= 1224)):
             print("Ingrese el ID del casillero que desea reservar >>", end=' ')
             id_res=input()
             try:
-                if int(id_res)<5000 or int(id_res)>5100:
+                if id_res.lower() == "exit":
+                    break
+                    
+                id_num = int(id_res)
+                if not ((5000 < id_num <= 5100) or (1000 < id_num <= 1224)):
                     print("<< Ingrese un ID de casillero válido...")
-                cursor.execute("SELECT * FROM casilleros WHERE id = ? AND en_uso = ?", (int(id_res), 0))
+                    id_res = 0 # Reiniciar para que siga el bucle
+                    continue
+                    
+                cursor.execute("SELECT * FROM casilleros WHERE id = ? AND en_uso = ?", (id_num, 0))
                 disp=cursor.fetchone()
                 if(disp==None):
-                    print("<< Casillero Ocupado")
+                    print("<< Casillero Ocupado o no existe")
                 else:
-                    cursor.execute("UPDATE casilleros SET en_uso = ? WHERE id = ?", (1, int(id_res)))
+                    cursor.execute("UPDATE casilleros SET en_uso = ? WHERE id = ?", (1, id_num))
                     conn.commit()
                     print("<< Casillero reservado con éxito!")
-                id_res=0;
+                id_res=0
+                
             except ValueError:
-                if id_res=="exit":
-                    break;
+                id_res=0
 
+    elif opt == "0": 
+        # Si se selecciona la opcion de liberar
+        cursor.execute("SELECT id, edificio FROM casilleros WHERE en_uso = 1")
+        output = cursor.fetchall()
+        print('Los casilleros Ocupados son: ')
+        for row in output:
+            print('   ', row[0], 'Edificio:', row[1])
+
+        id_lib = 0
+        # NUEVA VALIDACIÓN: Permitir 5001-5100 (Ed. 5) y 1001-1224 (Polideportivo)
+        while not ((5000 < int(id_lib) <= 5100) or (1000 < int(id_lib) <= 1224)):
+            print("Ingrese el ID del casillero que desea liberar >>", end=' ')
+            id_lib=input()
+            try: 
+                if id_lib.lower() == "exit":
+                    break
+                    
+                id_num = int(id_lib)
+                if not ((5000 < id_num <= 5100) or (1000 < id_num <= 1224)):
+                    print("<< Ingrese un ID de casillero válido...")
+                    id_lib = 0 # Reiniciar
+                    continue
+                    
+                cursor.execute("SELECT * FROM casilleros WHERE id = ? AND en_uso = ?", (id_num, 1))
+                ocup=cursor.fetchone()
+                if(ocup==None):
+                    print("<< Casillero No Ocupado")
                 else:
-                    id_res=0
-    else:
-        if opt == "0": # Si se selecciona la opcion de liberar
-
-            cursor.execute("SELECT id, edificio FROM casilleros WHERE en_uso = 1")
-            output = cursor.fetchall()
-            print('Los casilleros Ocupados son: ')
-            for row in output:
-                print('   ', row[0], 'Edificio:', row[1])
-
-            id_lib = 0
-            while int(id_lib)<5000 or int(id_lib)>5100:
-                print("Ingrese el ID del casillero que desea liberar >>", end=' ')
-
-                id_lib=input()
-                try: # Intentar convertir el input en un ENTERO
-
-                    # Si lo que se ingresó es un número menor a 5000 o mayor a 5100
-                    if int(id_lib)<5000 or int(id_lib)>5100:
-                        print("<< Ingrese un ID de casillero válido...")
-                    cursor.execute("SELECT * FROM casilleros WHERE id = ? AND en_uso = ?", (int(id_lib), 1))
-                    ocup=cursor.fetchone()
-                    if(ocup==None): # Si no regresa ningun casillero
-                        print("<< Casillero No Ocupado")
-                    else: # Si SÍ encuentra el casillero ingresado
-                        cursor.execute("UPDATE casilleros SET en_uso = ? WHERE id = ?", (0, int(id_lib)))
-                        conn.commit()
-                        print("<< Casillero liberado con éxito!")
-                    id_lib=0;
-                except ValueError: # Si el input no fue un entero
-                    if id_lib=="exit": # Si el input en realidad es "exit" sale del bucle
-                        break;
-
-                    else:
-                        id_lib=0
-
+                    cursor.execute("UPDATE casilleros SET en_uso = ? WHERE id = ?", (0, id_num))
+                    conn.commit()
+                    print("<< Casillero liberado con éxito!")
+                id_lib=0
+                
+            except ValueError: 
+                id_lib=0
