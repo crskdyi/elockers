@@ -3,7 +3,7 @@ from flask_cors import CORS
 import sqlite3
 import time
 
-from qr import generate_token, hash_token, generate_qr_data_url
+from qr import generar_token, hash_token, generar_qr_data_url
 
 app = Flask(__name__)
 CORS(app)
