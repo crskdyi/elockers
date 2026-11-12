@@ -12,7 +12,6 @@ def get_db_connection():
     return conn
 
 def init_db():
-    # Inicializa la base de datos y crea la tabla si no existe
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -24,18 +23,22 @@ def init_db():
         );
     """)
     
-    # Generación de los 100 casilleros iniciales para el edificio 5
-    try:
-        for i in range(1, 101):
-            cursor.execute(
-                "INSERT INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", 
-                (5000 + i, 5, False)
-            )
-        conn.commit()
-    except sqlite3.IntegrityError:
-        # Los registros ya existen, se omite la inserción
-        pass
+    # 1. Generar los 100 casilleros del Edificio 5 (id: 5001 al 5100)
+    for i in range(1, 101):
+        # INSERT OR IGNORE respeta los casilleros que ya existen
+        cursor.execute(
+            "INSERT OR IGNORE INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", 
+            (5000 + i, 5, False)
+        )
         
+    # 2. Generar los 224 casilleros del Polideportivo (id: 1001 al 1224)
+    for i in range(1, 225):
+        cursor.execute(
+            "INSERT OR IGNORE INTO casilleros (id, edificio, en_uso) VALUES (?, ?, ?)", 
+            (1000 + i, 1, False)
+        )
+        
+    conn.commit()
     conn.close()
 
 # Ejecución de la inicialización de la base de datos al arrancar el servidor
