@@ -90,7 +90,7 @@ def reserve_locker():
         conn.close()
         return jsonify({"status": "error", "message": "Casillero ocupado o inexistente"}), 400
 
-    token = generate_token()
+    token = generar_token()
     token_hash = hash_token(token)
     expires_at = int(time.time()) + (24 * 60 * 60)
 
@@ -103,7 +103,7 @@ def reserve_locker():
     conn.close()
 
     claim_url = f"{WEB_CLAIM_URL}?token={token}"
-    qr_data_url = generate_qr_data_url(claim_url)
+    qr_data_url = generar_qr_data_url(claim_url)
 
     return jsonify({
         "status": "success",
