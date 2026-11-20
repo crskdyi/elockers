@@ -102,7 +102,7 @@ def reserve_locker():
     conn.commit()
     conn.close()
 
-    claim_url = "https://reservar-casilleros-fime.netlify.app/"
+    claim_url = f"https://reservar-casilleros-fime.netlify.app/"
     qr_data_url = generar_qr_data_url(claim_url)
 
     return jsonify({
