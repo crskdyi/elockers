@@ -2,13 +2,14 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sqlite3
 import time
+from urllib.parse import urlencode
 
 from qr import generar_token, hash_token, generar_qr_data_url
 
 app = Flask(__name__)
 CORS(app)
 
-WEB_CLAIM_URL = "http://localhost:3000/locker/claim"
+WEB_CLAIM_URL = "https://reservar-casilleros-fime.netlify.app/locker/claim"
 
 def get_db_connection():
     conn = sqlite3.connect("casilleros.db")
@@ -102,7 +103,8 @@ def reserve_locker():
     conn.commit()
     conn.close()
 
-    claim_url = f"https://reservar-casilleros-fime.netlify.app/"
+    # Keep the bearer token in the URL fragment: fragments are not sent to web servers.
+    claim_url = f"{WEB_CLAIM_URL}#{urlencode({'token': token})}"
     qr_data_url = generar_qr_data_url(claim_url)
 
     return jsonify({
@@ -115,6 +117,7 @@ def reserve_locker():
         },
         "expires_at": expires_at
     })
+
 @app.route("/api/qr/claim", methods=["POST"])
 def claim_qr():
     data = request.get_json(silent=True) or {}
